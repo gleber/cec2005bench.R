@@ -1,0 +1,66 @@
+library('cec2005benchmark')
+library('DEoptim')
+library('sfsmisc')
+
+##
+## Parameters
+##
+
+funcs = c(6:12, 19:24)
+# fes = c(10**3, 10**4, 10**5, 5*10**5) # full workload
+fes = c(10**2,10**3) # test workload
+fes.max = last(fes)
+dims = c(10, 30)
+runs = 25
+eps = 10**-8
+strategy = 2 # strategy used by DEoptim
+fe.per.strategy = c(NA, 2)
+F = 0.9
+params = read.table('data/nps.tbl',header=T) # contains Np and Cr
+fbias = as.matrix(read.table('data/fbias_data.txt')) # contains minimum values
+limits = as.matrix(read.table('data/limits.txt')) # contains upper and lower limits for optimization domain
+
+##
+## Variables
+##
+
+results = array(NA, dim=c(max(funcs), max(dims), runs, length(fes))) # stores results of benchmark
+iters = fes.max/fe.per.strategy[strategy] # defines number of iterations depending on the DE strategy used
+
+##
+## Main loop
+##
+
+for (i in funcs) { # for each of desired functions
+  limit = limits[i,]
+  bias = fbias[i]
+  f = function(x) {
+    cec2005benchmark(i, x)
+  }
+  for (d in dims) { # for each of desired dimentions
+    lower = as.double(rep(limit[1], d))
+    upper = as.double(rep(limit[2], d))
+    Np = params[i,sprintf('Np%dD', d)]
+    Cr = params[i,sprintf('Cr%dD', d)]
+    for (run in 1:runs) { # run DE algorithm 'runs' times
+      print(sprintf("Running function %d in %d dims for %dth time for %d iters", i, d, run, iters))
+      r = DEoptim(f, lower, upper, control= # run optimization
+        DEoptim.control(itermax=iters,
+                        NP=Np, CR=Cr, F=F,
+                        VTR=bias + eps,
+                        strategy=strategy,
+                        trace=iters / 10
+                        ))
+      for (fe.i in 1:length(fes)) { # fetch error values from optimization history
+        fe = fes[fe.i]
+        fe.pop = (fe / fe.per.strategy[strategy])
+        pop = r$member$bestmemit[fe.pop,]
+        val = f(pop)
+        err = val - bias
+        results[i, d, run, fe.i] = val
+        print(sprintf("Error of function %d in %d dims %dth time in %d fes is %g", i, d, run, fe, err))
+      }
+      save(results, file="results.rdata")
+    }
+  }
+}
