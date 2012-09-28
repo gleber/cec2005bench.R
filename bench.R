@@ -6,9 +6,11 @@ library('sfsmisc')
 ## Parameters
 ##
 
-funcs = c(6:12, 19:24)
-# fes = c(10**3, 10**4, 10**5, 5*10**5) # full workload
-fes = c(10**2,10**3) # test workload
+#funcs = c(6:12, 19:24)
+funcs = c(6:7)
+#fes = c(10**3, 10**4, 10**5, 5*10**5) # full workload
+fes = c(10**3, 10**4, 10**5, 5*10**5) # test workload
+#fes = c(10**1, 10**2) # debug workload
 fes.max = last(fes)
 dims = c(10, 30)
 runs = 25
@@ -24,7 +26,7 @@ limits = as.matrix(read.table('data/limits.txt')) # contains upper and lower lim
 ## Variables
 ##
 
-results = array(NA, dim=c(max(funcs), max(dims), runs, length(fes))) # stores results of benchmark
+results = array(NA, dim=c(max(funcs), max(dims), runs, length(fes), 3)) # stores results of benchmark
 iters = fes.max/fe.per.strategy[strategy] # defines number of iterations depending on the DE strategy used
 
 ##
@@ -49,15 +51,18 @@ for (i in funcs) { # for each of desired functions
                         NP=Np, CR=Cr, F=F,
                         VTR=bias + eps,
                         strategy=strategy,
-                        trace=iters / 10
+                        trace=iters / 10,
+			parallelType=1, packages=c('cec2005benchmark'), parVar=c('i')
                         ))
       for (fe.i in 1:length(fes)) { # fetch error values from optimization history
         fe = fes[fe.i]
-        fe.pop = (fe / fe.per.strategy[strategy])
+        fe.pop = min(r$optim$iter, (fe / fe.per.strategy[strategy]))
         pop = r$member$bestmemit[fe.pop,]
         val = f(pop)
         err = val - bias
-        results[i, d, run, fe.i] = val
+        results[i, d, run, fe.i, 1] = val
+        results[i, d, run, fe.i, 2] = r$optim$iter
+        results[i, d, run, fe.i, 3] = r$optim$nfeval
         print(sprintf("Error of function %d in %d dims %dth time in %d fes is %g", i, d, run, fe, err))
       }
       save(results, file="results.rdata")
