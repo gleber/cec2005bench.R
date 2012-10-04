@@ -6,8 +6,8 @@ library('sfsmisc')
 ## Parameters
 ##
 
-#funcs = c(6:12, 19:24)
-funcs = c(6:7)
+funcs = c(6:12, 19:24)
+#funcs = c(6:7)
 #fes = c(10**3, 10**4, 10**5, 5*10**5) # full workload
 fes = c(10**3, 10**4, 10**5, 5*10**5) # test workload
 #fes = c(10**1, 10**2) # debug workload
@@ -27,9 +27,12 @@ limits = as.matrix(read.table('data/limits.txt')) # contains upper and lower lim
 ##
 
 load("results.rdata")
-if (!exists("results")) {
-  results = array(NA, dim=c(max(funcs), max(dims), runs, length(fes), 3)) # stores results of benchmark
+if (exists("results")) {
+  results.old = results
+} else {
+  results.old = array(NA, dim=c(max(funcs), max(dims), runs, length(fes), 3))
 }
+results = array(NA, dim=c(max(funcs), max(dims), runs, length(fes), 3)) # stores results of benchmark
 iters = fes.max/fe.per.strategy[strategy] # defines number of iterations depending on the DE strategy used
 
 ##
@@ -49,8 +52,11 @@ for (i in funcs) { # for each of desired functions
     Np = params[i,sprintf('Np%dD', d)]
     Cr = params[i,sprintf('Cr%dD', d)]
     for (run in 1:runs) { # run DE algorithm 'runs' times
-      if (!is.na(results[i, d, run, length(fes), 1])) {
+      old.val = try(results.old[i, d, run, length(fes), 1])
+      if (is.numeric(old.val)) {
+        results[i, d, run, , ] = results.old[i, d, run, , ]
         print(sprintf("Skipping function %d in %d dims for %dth time for %d iters", i, d, run, iters))
+        print(results[i, d, run, ,])
         next;
       }
       print(sprintf("Running function %d in %d dims for %dth time for %d iters", i, d, run, iters))
