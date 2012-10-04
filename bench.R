@@ -33,6 +33,8 @@ iters = fes.max/fe.per.strategy[strategy] # defines number of iterations dependi
 ## Main loop
 ##
 
+save(results, file="results.rdata")
+
 for (i in funcs) { # for each of desired functions
   limit = limits[i,]
   bias = fbias[i]
