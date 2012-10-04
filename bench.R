@@ -26,14 +26,16 @@ limits = as.matrix(read.table('data/limits.txt')) # contains upper and lower lim
 ## Variables
 ##
 
-results = array(NA, dim=c(max(funcs), max(dims), runs, length(fes), 3)) # stores results of benchmark
+load("results.rdata")
+if (!exists("results")) {
+  results = array(NA, dim=c(max(funcs), max(dims), runs, length(fes), 3)) # stores results of benchmark
+}
 iters = fes.max/fe.per.strategy[strategy] # defines number of iterations depending on the DE strategy used
 
 ##
 ## Main loop
 ##
 
-save(results, file="results.rdata")
 
 for (i in funcs) { # for each of desired functions
   limit = limits[i,]
@@ -47,6 +49,10 @@ for (i in funcs) { # for each of desired functions
     Np = params[i,sprintf('Np%dD', d)]
     Cr = params[i,sprintf('Cr%dD', d)]
     for (run in 1:runs) { # run DE algorithm 'runs' times
+      if (!is.na(results[i, d, run, length(fes), 1])) {
+        print(sprintf("Skipping function %d in %d dims for %dth time for %d iters", i, d, run, iters))
+        next;
+      }
       print(sprintf("Running function %d in %d dims for %dth time for %d iters", i, d, run, iters))
       r = DEoptim(f, lower, upper, control= # run optimization
         DEoptim.control(itermax=iters,
