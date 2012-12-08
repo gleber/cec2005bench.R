@@ -6,7 +6,8 @@ library('sfsmisc')
 ## Parameters
 ##
 
-funcs = c(6:12, 19:24)
+funcs = c(6:11, 19:24)
+#funcs = c(6:12, 19:24) # turned 12 off, since it has some sort of memory leak
 #funcs = c(6:7)
 #fes = c(10**3, 10**4, 10**5, 5*10**5) # full workload
 fes = c(10**3, 10**4, 10**5, 5*10**5) # test workload
@@ -52,10 +53,11 @@ for (i in funcs) { # for each of desired functions
     Np = params[i,sprintf('Np%dD', d)]
     Cr = params[i,sprintf('Cr%dD', d)]
     for (run in 1:runs) { # run DE algorithm 'runs' times
+      #print(sprintf("Trying %d %d %d %d", i, d, run, length(fes), 1))
       old.val = try(results.old[i, d, run, length(fes), 1])
-      if (is.numeric(old.val)) {
+      if (is.numeric(old.val) && !is.na(old.val)) {
         results[i, d, run, , ] = results.old[i, d, run, , ]
-        print(sprintf("Skipping function %d in %d dims for %dth time for %d iters", i, d, run, iters))
+        print(sprintf("Skipping function %d in %d dims for %dth time for %d iters (%s)", i, d, run, iters, old.val))
         print(results[i, d, run, ,])
         next;
       }
