@@ -1,0 +1,105 @@
+% Created 2012-12-09 Sun 20:07
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fixltx2e}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{soul}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{wasysym}
+\usepackage{latexsym}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\tolerance=1000
+\providecommand{\alert}[1]{\textbf{#1}}
+
+\title{Wstęp do algorytmów ewolucyjnych}
+\author{Gleb Peregud}
+\date{\today}
+\hypersetup{
+  pdfkeywords={},
+  pdfsubject={},
+  pdfcreator={Emacs Org-mode version 7.8.11}}
+
+\begin{document}
+
+\maketitle
+
+\setcounter{tocdepth}{3}
+\tableofcontents
+\vspace*{1cm}
+
+Dokumentacja końcowa
+
+\section{Wstęp}
+\label{sec-1}
+
+
+Projekt polega na zaimplementowaniu benchmark CEC2005 w języku R,
+użyciu pakietu DEoptim do zbadania efektywności optymizacji
+Differential Evolution na tych funkcjach oraz porównaniu ich z
+wynikami uzyskanymi przez J. Rönkkönen, S. Kukkonen oraz K. V. Price.
+
+Dany projekt skupia się na zbadaniu następujących funkcji z benchmarku
+CEC2005:
+\begin{itemize}
+\item Shifted Rosenbrock’s Function (funkcja numer 6)
+\item Shifted Rotated Griewank’s Function without Bounds (funkcja numer 7)
+\item Shifted Rotated Ackley’s Function with Global Optimum on Bounds (funkcja numer 8)
+\item Shifted Rastrigin’s Function (funkcja numer 9)
+\item Shifted Rotated Rastrigin’s Function (funkcja numer 10)
+\item Shifted Rotated Weierstrass Function (funkcja numer 11)
+\item Schwefel’s Problem 2.13 (funkcja numer 12)
+\item Rotated Hybrid Composition Function with a Narrow Basin for the
+  Global Optimum (funkcja numer 19)
+\item Rotated Hybrid Composition Function with Global Optimum on the
+  Bounds (funkcja numer 20)
+\item Rotated Hybrid Composition Function (funkcja numer 21)
+\item Rotated Hybrid Composition Function with High Condition Number
+  Matrix (funkcja numer 22)
+\item Non-Continuous Rotated Hybrid Composition Function (funkcja numer 23)
+\item Rotated Hybrid Composition Function (funkcja numer 24)
+\end{itemize}
+
+Funkcje zostały zbadane dla 10 oraz 30 wymiarów.
+\section{Algorytm}
+\label{sec-2}
+
+
+DEoptim jest implementacja >
+Wybrane parametry >
+\section{Implementacja}
+\label{sec-3}
+
+
+Żeby nie powtarzać pracy wykonanej przez innych w projekcie został
+wykorzystany projekt cec2005benchmark w języku R autorstwa Yasser
+González Fernández <ygonzalezfernandez@gmail.com> oraz Marta Rosa Soto
+Ortiz <mrosa@icimaf.cu>.
+
+Implementacja użyta do uzyskania wyników jest dostępna na stronie
+\href{https://github.com/gleber/cec2005bench.Rpr}{https://github.com/gleber/cec2005bench.Rpr}
+
+Ważnym punktem implementacji była możliwość uruchamiania procesu
+optymizacji po jej przerwaniu, żeby móc efektywnie wprowadzać jakieś
+poprawki do systemu bez tracenia wyników jej pracy. Zostało to
+zaimplementowane korzystając z możliwości serializacji macierzy i
+zapisywaniu ich do pliku korzystając z funkcji 
+
+Kod - opis kodu, wykorzystanych technologii oraz optymalizacji
+\section{Wyniki}
+\label{sec-4}
+
+
+Tabelki z porównaniem wyników uzyskanych przez J. Rönkkönen, S. Kukkonen, K. V. Price
+\section{Wnioski}
+\label{sec-5}
+
+
+Słowne podsumowanie wyników i jakieś wnioski
+
+\end{document}
