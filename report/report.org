@@ -1,0 +1,182 @@
+Wstęp do algorytmów ewolucyjnych
+
+Dokumentacja końcowa
+
+* Wstęp
+
+Projekt polega na zaimplementowaniu benchmark CEC2005 w języku R,
+użyciu pakietu DEoptim do zbadania efektywności optymizacji
+Differential Evolution na tych funkcjach oraz porównaniu ich z
+wynikami uzyskanymi przez J. Rönkkönen, S. Kukkonen oraz K. V. Price.
+
+Dany projekt skupia się na zbadaniu następujących funkcji z benchmarku
+CEC2005:
+- Shifted Rosenbrock’s Function (funkcja numer 6)
+- Shifted Rotated Griewank’s Function without Bounds (funkcja numer 7)
+- Shifted Rotated Ackley’s Function with Global Optimum on Bounds (funkcja numer 8)
+- Shifted Rastrigin’s Function (funkcja numer 9)
+- Shifted Rotated Rastrigin’s Function (funkcja numer 10)
+- Shifted Rotated Weierstrass Function (funkcja numer 11)
+- Schwefel’s Problem 2.13 (funkcja numer 12)
+- Rotated Hybrid Composition Function with a Narrow Basin for the
+  Global Optimum (funkcja numer 19)
+- Rotated Hybrid Composition Function with Global Optimum on the
+  Bounds (funkcja numer 20)
+- Rotated Hybrid Composition Function (funkcja numer 21)
+- Rotated Hybrid Composition Function with High Condition Number
+  Matrix (funkcja numer 22)
+- Non-Continuous Rotated Hybrid Composition Function (funkcja numer 23)
+- Rotated Hybrid Composition Function (funkcja numer 24)
+
+Funkcje zostały zbadane dla 10 oraz 30 wymiarów.
+
+* Algorytm
+
+DEoptim jest implementacja algorytmu ewolucyjnej optymalizacji różniczkowej.
+
+Parametry dla algorytmu optymalizacji zostały wybrane następujące:
+
+| Wymiary: |  10 |  10 |  30 |  30 |
+|----------+-----+-----+-----+-----|
+|  Funkcja |  Np |  Cr |  Np |  Cr |
+|----------+-----+-----+-----+-----|
+|        6 |  20 | 0.9 |  20 | 0.9 |
+|        7 |  20 | 0.9 |  50 | 0.9 |
+|        8 |  20 | 0.9 | 100 | 0.9 |
+|        9 |  20 | 0.1 |  50 | 0.1 |
+|       10 | 100 | 0.9 |  20 | 0.9 |
+|       11 |  50 | 0.9 |  20 | 0.9 |
+|       12 | 100 | 0.9 |  50 | 0.9 |
+|       19 | 100 | 0.9 | 100 | 0.9 |
+|       20 | 100 | 0.9 | 100 | 0.9 |
+|       21 | 100 | 0.9 | 100 | 0.9 |
+|       22 | 100 | 0.9 | 100 | 0.9 |
+|       23 | 100 | 0.9 | 100 | 0.9 |
+|       24 | 100 | 0.9 | 100 | 0.9 |
+
+To są takie same parametry jak były użyte przez Rönkkönen et
+al. Analogicznie zastosowano strategie DE/local-to-best/1/bin.
+
+Wyniki badanych funkcji są zbierane na etapach 10^3, 10^4, 10^5,
+5*10^5 -tych wywołan funkcji optymalizowanej.
+
+Optymalizacja dla każdej funkcja dla każdej ilości wymiarów została
+uruchomiona 25 razy. Następnie zostały zestawione statystyki takie jak
+0, 0.25, 0.5, 0.75 oraz 1 percentyl, średnia oraz standardowe
+odchylenie wyników.
+
+* Implementacja
+
+Żeby nie powtarzać pracy wykonanej przez innych w projekcie został
+wykorzystany projekt cec2005benchmark w języku R autorstwa Yasser
+González Fernández <ygonzalezfernandez@gmail.com> oraz Marta Rosa Soto
+Ortiz <mrosa@icimaf.cu>.
+
+Implementacja użyta do uzyskania wyników jest dostępna na stronie
+https://github.com/gleber/cec2005bench.R
+
+Ważnym punktem implementacji była możliwość uruchamiania procesu
+optymizacji po jej przerwaniu, żeby móc efektywnie wprowadzać jakieś
+poprawki do systemu bez tracenia wyników jej pracy. Zostało to
+zaimplementowane korzystając z możliwości serializacji macierzy i
+zapisywaniu ich do pliku korzystając z funkcji src_R{save}.
+
+Prawie cały ważny kod projektu się mieści w następujących linijkach:
+
+#+LABEL: file:bench
+#+NAME: Plik bench.R
+#+CAPTION: [Plik bench.R]{Najważniejszy kod z pliku bench.R odpowiadający za uruchomienie procesu optymalizacji}
+#+BEGIN_SRC R -n -r
+  for (i in funcs) { # for each of desired functions
+    limit = limits[i,] # fetch bounds for selected function
+    bias = fbias[i] # fetch bias for selected function
+    f = function(x) {
+      cec2005benchmark(i, x)
+    }
+    for (d in dims) { # for each of desired dimentions
+      lower = as.double(rep(limit[1], d)) # fetch upper bound for selected dimension
+      upper = as.double(rep(limit[2], d)) # fetch lower bound for selected dimension
+      Np = params[i,sprintf('Np%dD', d)] # fetch Np for selected function and dimension
+      Cr = params[i,sprintf('Cr%dD', d)] # fetch Cr for selected function and dimension
+      for (run in 1:runs) { # run DE algorithm 'runs' times
+        old.val = try(results.old[i, d, run, length(fes), 1]) # result caching mechanism
+        if (is.numeric(old.val) && !is.na(old.val)) {
+          results[i, d, run, , ] = results.old[i, d, run, , ]
+          next;
+        }
+        r = DEoptim(f, lower, upper, control= # run optimization
+          DEoptim.control(itermax=iters,
+                          NP=Np, CR=Cr, F=F,
+                          VTR=bias + eps,
+                          strategy=strategy,
+                          trace=iters / 10,
+                          parallelType=1, packages=c('cec2005benchmark'), parVar=c('i') (ref:parallel) 
+                          ))
+        for (fe.i in 1:length(fes)) { # fetch error values from optimization history
+          fe = fes[fe.i]
+          fe.pop = min(r$optim$iter, (fe / fe.per.strategy[strategy]))
+          pop = r$member$bestmemit[fe.pop,]
+          val = f(pop)
+          results[i, d, run, fe.i, 1] = val # saving results
+          results[i, d, run, fe.i, 2] = r$optim$iter
+          results[i, d, run, fe.i, 3] = r$optim$nfeval
+        }
+        save(results, file="results.rdata")
+      }
+    }
+  }
+#+END_SRC
+
+Główny kod wykorzystuje parametry zawarte w module `params.R`:
+
+#+LABEL: file:params
+#+NAME: Plik params.R
+#+BEGIN_SRC R -n
+#+INCLUDE: ../params.R
+#+END_SRC
+
+Powyższy kod uruchamia funkcje DEoptim z odpowiednimi parametrami z
+włączonym trace-owaniem, żeby umożliwić zbieranie wyników ze
+wszystkich interesujących nas iteracji. Jako, że funkcja DEoptim nie
+obsługuje ograniczenia ilości iteracji na podstawie ilości wywołań
+funkcji optymizowanej, została użyta następująca metoda zapewnienia
+sobie takiej możliwości. W zależności od strategii optymizacji
+różniczkowania ewolucyjnego w czasie każdej iteracji jest
+wykonywana określona ilość wywołań funkcji optymizalizowanej. W naszym
+przypadku, używając strategii DE/local-to-best/1/bin, przy każdej
+iteracji funkcja optymalizacyjna jest wywoływana dwa razy.
+
+Dzięki wyniesieniu wszystkich parametrów sterujących do oddzielnego
+małego pliku, jest możliwość w łatwy sposób zarządzać nimi.
+
+Dzięki użyciu biblioteki cec2005benchmark, która jest zaimplementowana
+w C, implementacja funkcji optymalizowanych jest bardzo
+szybka. Dodatkowo, w celu przyśpieszenia obliczeń została wykorzystana
+możliwość uruchamiania procesu optymalizacji z wykorzystaniem
+wszystkich procesorów dostępnych na sprzęcie (patrz linia [[(parallel)]]).
+
+* Wyniki
+
+Tabelki wyników. Dla niektórych funkcji w polach wyników jest wpisane
+NA, co oznacza, że wyniki jeszcze nie są dostępne, a obliczenia wciąż
+trwają.
+
+#+begin_latex
+\texttt{
+#+INCLUDE: tables.tex
+}
+#+end_latex
+
+* Wnioski
+
+Wyniki uzyskane w czasie tego projektu różnią się w porównaniu do
+wyników uzyskanych przez J. Rönkkönen, S. Kukkonen, K. V. Price na
+korzyść biblioteki DEoptim. Wyniki zarówno dla 10^3 jak i dla 5*10^5
+wywołań funkcji są zazwyczaj lepsze o jeden do trzech rzędów
+wielkości. Zaś warto zauważyć, że standardowe odchylenie uzyskanych
+przez nas wyników jest zazwyczaj większe niż u wyników Rönkkönen et
+al. Z tego można wywnioskować, że implementacja algorytmu
+optymalizacji poprzez różniczkowanie ewolucyjne w postaci biblioteki
+DEoptim dla języka R oraz dobrane przez nas parametry optymalizacji
+potrafią uzyskać lepsze wyniki niż uzyskane przez Rönkkönen et al,
+choć jej wyniki potrafią być mniej stabilne.

@@ -1,4 +1,4 @@
-% Created 2012-12-09 Sun 20:07
+% Created 2012-12-15 Sat 21:00
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -70,8 +70,45 @@ Funkcje zostały zbadane dla 10 oraz 30 wymiarów.
 \label{sec-2}
 
 
-DEoptim jest implementacja >
-Wybrane parametry >
+DEoptim jest implementacja algorytmu ewolucyjnej optymalizacji różniczkowej.
+
+Parametry dla algorytmu optymalizacji zostały wybrane następujące:
+
+
+\begin{center}
+\begin{tabular}{rrrrr}
+ Wymiary:  &   10  &   10  &   30  &   30  \\
+\hline
+  Funkcja  &   Np  &   Cr  &   Np  &   Cr  \\
+\hline
+        6  &   20  &  0.9  &   20  &  0.9  \\
+        7  &   20  &  0.9  &   50  &  0.9  \\
+        8  &   20  &  0.9  &  100  &  0.9  \\
+        9  &   20  &  0.1  &   50  &  0.1  \\
+       10  &  100  &  0.9  &   20  &  0.9  \\
+       11  &   50  &  0.9  &   20  &  0.9  \\
+       12  &  100  &  0.9  &   50  &  0.9  \\
+       19  &  100  &  0.9  &  100  &  0.9  \\
+       20  &  100  &  0.9  &  100  &  0.9  \\
+       21  &  100  &  0.9  &  100  &  0.9  \\
+       22  &  100  &  0.9  &  100  &  0.9  \\
+       23  &  100  &  0.9  &  100  &  0.9  \\
+       24  &  100  &  0.9  &  100  &  0.9  \\
+\end{tabular}
+\end{center}
+
+
+
+To są takie same parametry jak były użyte przez Rönkkönen et
+al. Analogicznie zastosowano strategie DE/local-to-best/1/bin.
+
+Wyniki badanych funkcji są zbierane na etapach 10$^3$, 10$^4$, 10$^5$,
+5*10$^5$ -tych wywołan funkcji optymalizowanej.
+
+Optymalizacja dla każdej funkcja dla każdej ilości wymiarów została
+uruchomiona 25 razy. Następnie zostały zestawione statystyki takie jak
+0, 0.25, 0.5, 0.75 oraz 1 percentyl, średnia oraz standardowe
+odchylenie wyników.
 \section{Implementacja}
 \label{sec-3}
 
@@ -82,7 +119,7 @@ González Fernández <ygonzalezfernandez@gmail.com> oraz Marta Rosa Soto
 Ortiz <mrosa@icimaf.cu>.
 
 Implementacja użyta do uzyskania wyników jest dostępna na stronie
-\href{https://github.com/gleber/cec2005bench.Rpr}{https://github.com/gleber/cec2005bench.Rpr}
+\href{https://github.com/gleber/cec2005bench.R}{https://github.com/gleber/cec2005bench.R}
 
 Ważnym punktem implementacji była możliwość uruchamiania procesu
 optymizacji po jej przerwaniu, żeby móc efektywnie wprowadzać jakieś
@@ -90,16 +127,272 @@ poprawki do systemu bez tracenia wyników jej pracy. Zostało to
 zaimplementowane korzystając z możliwości serializacji macierzy i
 zapisywaniu ich do pliku korzystając z funkcji 
 
-Kod - opis kodu, wykorzystanych technologii oraz optymalizacji
+Prawie cały ważny kod projektu się mieści w następujących linijkach:
+
+
+\begin{verbatim}
+ 1:  for (i in funcs) { # for each of desired functions
+ 2:    limit = limits[i,] # fetch bounds for selected function
+ 3:    bias = fbias[i] # fetch bias for selected function
+ 4:    f = function(x) {
+ 5:      cec2005benchmark(i, x)
+ 6:    }
+ 7:    for (d in dims) { # for each of desired dimentions
+ 8:      lower = as.double(rep(limit[1], d)) # fetch upper bound for selected dimension
+ 9:      upper = as.double(rep(limit[2], d)) # fetch lower bound for selected dimension
+10:      Np = params[i,sprintf('Np%dD', d)] # fetch Np for selected function and dimension
+11:      Cr = params[i,sprintf('Cr%dD', d)] # fetch Cr for selected function and dimension
+12:      for (run in 1:runs) { # run DE algorithm 'runs' times
+13:        old.val = try(results.old[i, d, run, length(fes), 1]) # result caching mechanism
+14:        if (is.numeric(old.val) && !is.na(old.val)) {
+15:          results[i, d, run, , ] = results.old[i, d, run, , ]
+16:          next;
+17:        }
+18:        r = DEoptim(f, lower, upper, control= # run optimization
+19:          DEoptim.control(itermax=iters,
+20:                          NP=Np, CR=Cr, F=F,
+21:                          VTR=bias + eps,
+22:                          strategy=strategy,
+23:                          trace=iters / 10,
+24:                          parallelType=1, packages=c('cec2005benchmark'), parVar=c('i') 
+25:                          ))
+26:        for (fe.i in 1:length(fes)) { # fetch error values from optimization history
+27:          fe = fes[fe.i]
+28:          fe.pop = min(r$optim$iter, (fe / fe.per.strategy[strategy]))
+29:          pop = r$member$bestmemit[fe.pop,]
+30:          val = f(pop)
+31:          results[i, d, run, fe.i, 1] = val # saving results
+32:          results[i, d, run, fe.i, 2] = r$optim$iter
+33:          results[i, d, run, fe.i, 3] = r$optim$nfeval
+34:        }
+35:        save(results, file="results.rdata")
+36:      }
+37:    }
+38:  }
+\end{verbatim}
+
+Główny kod wykorzystuje parametry zawarte w module `params.R`:
+
+
+\begin{verbatim}
+ 1:  library('sfsmisc')
+ 2:  
+ 3:  funcs = c(6:11, 19:24)
+ 4:  fes = c(10**3, 10**4, 10**5, 5*10**5) # full workload
+ 5:  fes.max = last(fes)
+ 6:  dims = c(10, 30)
+ 7:  runs = 25
+ 8:  eps = 10**-8
+ 9:  strategy = 2 # strategy used by DEoptim
+10:  fe.per.strategy = c(NA, 2)
+11:  F = 0.9
+12:  params = read.table('data/nps.tbl',header=T) # contains Np and Cr
+13:  fbias = as.matrix(read.table('data/fbias_data.txt')) # contains minimum values
+14:  limits = as.matrix(read.table('data/limits.txt')) # contains upper and lower limits for optimization domain
+15:  
+16:  iters = fes.max/fe.per.strategy[strategy] # defines number of iterations depending on the DE strategy used
+\end{verbatim}
+
+Powyższy kod uruchamia funkcje DEoptim z odpowiednimi parametrami z
+włączonym trace-owaniem, żeby umożliwić zbieranie wyników ze
+wszystkich interesujących nas iteracji. Jako, że funkcja DEoptim nie
+obsługuje ograniczenia ilości iteracji na podstawie ilości wywołań
+funkcji optymizowanej, została użyta następująca metoda zapewnienia
+sobie takiej możliwości. W zależności od strategii optymizacji
+różniczkowania ewolucyjnego w czasie każdej iteracji jest
+wykonywana określona ilość wywołań funkcji optymizalizowanej. W naszym
+przypadku, używając strategii DE/local-to-best/1/bin, przy każdej
+iteracji funkcja optymalizacyjna jest wywoływana dwa razy.
+
+Dzięki wyniesieniu wszystkich parametrów sterujących do oddzielnego
+małego pliku, jest możliwość w łatwy sposób zarządzać nimi.
+
+Dzięki użyciu biblioteki cec2005benchmark, która jest zaimplementowana
+w C, implementacja funkcji optymalizowanych jest bardzo
+szybka. Dodatkowo, w celu przyśpieszenia obliczeń została wykorzystana
+możliwość uruchamiania procesu optymalizacji z wykorzystaniem
+wszystkich procesorów dostępnych na sprzęcie (patrz linia 24).
 \section{Wyniki}
 \label{sec-4}
 
 
-Tabelki z porównaniem wyników uzyskanych przez J. Rönkkönen, S. Kukkonen, K. V. Price
+Tabelki wyników. Dla niektórych funkcji w polach wyników jest wpisane
+NA, co oznacza, że wyniki jeszcze nie są dostępne, a obliczenia wciąż
+trwają.
+
+\texttt{
+Results in 10 dimensions for functions 6, 7, 8, 9, 10, 11
+% latex table generated in R 2.15.1 by xtable 1.7-0 package
+% Sat Dec 15 19:01:56 2012
+\begin{longtable}{llllllll}
+  \hline
+fe & stats & V6 & V7 & V8 & V9 & V10 & V11 \\ 
+  \hline
+1e+03 & 0\% & 1.2e-04 & 1.3e+03 & 2.0e+01 & 1.1e-08 & 2.0e+01 & 5.0e-01 \\ 
+  1e+03 & 25\% & 1.4e-02 & 1.3e+03 & 2.0e+01 & 1.2e-08 & 2.4e+01 & 3.4e+00 \\ 
+  1e+03 & 50\% & 1.5e-01 & 1.3e+03 & 2.1e+01 & 2.3e-08 & 2.8e+01 & 6.4e+00 \\ 
+  1e+03 & 75\% & 2.2e+00 & 1.3e+03 & 2.1e+01 & 3.8e-08 & 3.0e+01 & 6.9e+00 \\ 
+  1e+03 & 100\% & 4.1e+00 & 1.3e+03 & 2.1e+01 & 1.4e-05 & 3.7e+01 & 8.6e+00 \\ 
+  1e+03 & avg & 1.2e+00 & 1.3e+03 & 2.1e+01 & 6.5e-07 & 2.7e+01 & 5.3e+00 \\ 
+  1e+03 & std & 1.7e+00 & 1.5e-03 & 7.1e-02 & 2.8e-06 & 4.2e+00 & 2.7e+00 \\ 
+  1e+04 & 0\% & 1.0e-08 & 1.3e+03 & 2.0e+01 & 1.1e-08 & 2.0e+00 & 1.0e-08 \\ 
+  1e+04 & 25\% & 1.1e-08 & 1.3e+03 & 2.0e+01 & 1.1e-08 & 4.0e+00 & 1.1e-08 \\ 
+  1e+04 & 50\% & 1.2e-08 & 1.3e+03 & 2.0e+01 & 1.5e-08 & 5.0e+00 & 4.1e-03 \\ 
+  1e+04 & 75\% & 2.4e-08 & 1.3e+03 & 2.0e+01 & 2.3e-08 & 6.0e+00 & 1.5e+00 \\ 
+  1e+04 & 100\% & 4.0e+00 & 1.3e+03 & 2.0e+01 & 3.9e-08 & 9.0e+00 & 2.6e+00 \\ 
+  1e+04 & avg & 9.6e-01 & 1.3e+03 & 2.0e+01 & 1.8e-08 & 5.3e+00 & 6.9e-01 \\ 
+  1e+04 & std & 1.7e+00 & 1.5e-13 & 7.1e-02 & 8.5e-09 & 1.7e+00 & 9.1e-01 \\ 
+  1e+05 & 0\% & 1.0e-08 & 1.3e+03 & 2.0e+01 & 1.1e-08 & 2.0e+00 & 1.0e-08 \\ 
+  1e+05 & 25\% & 1.1e-08 & 1.3e+03 & 2.0e+01 & 1.1e-08 & 4.0e+00 & 1.1e-08 \\ 
+  1e+05 & 50\% & 1.2e-08 & 1.3e+03 & 2.0e+01 & 1.5e-08 & 5.0e+00 & 4.1e-03 \\ 
+  1e+05 & 75\% & 2.4e-08 & 1.3e+03 & 2.0e+01 & 2.3e-08 & 6.0e+00 & 1.5e+00 \\ 
+  1e+05 & 100\% & 4.0e+00 & 1.3e+03 & 2.0e+01 & 3.9e-08 & 8.0e+00 & 2.6e+00 \\ 
+  1e+05 & avg & 9.6e-01 & 1.3e+03 & 2.0e+01 & 1.8e-08 & 5.1e+00 & 6.9e-01 \\ 
+  1e+05 & std & 1.7e+00 & 0.0e+00 & 6.7e-02 & 8.5e-09 & 1.5e+00 & 9.1e-01 \\ 
+  5e+05 & 0\% & 1.0e-08 & 1.3e+03 & 2.0e+01 & 1.1e-08 & 2.0e+00 & 1.0e-08 \\ 
+  5e+05 & 25\% & 1.1e-08 & 1.3e+03 & 2.0e+01 & 1.1e-08 & 4.0e+00 & 1.1e-08 \\ 
+  5e+05 & 50\% & 1.2e-08 & 1.3e+03 & 2.0e+01 & 1.5e-08 & 5.0e+00 & 4.1e-03 \\ 
+  5e+05 & 75\% & 2.4e-08 & 1.3e+03 & 2.0e+01 & 2.3e-08 & 6.0e+00 & 1.5e+00 \\ 
+  5e+05 & 100\% & 4.0e+00 & 1.3e+03 & 2.0e+01 & 3.9e-08 & 8.0e+00 & 2.6e+00 \\ 
+  5e+05 & avg & 9.6e-01 & 1.3e+03 & 2.0e+01 & 1.8e-08 & 5.0e+00 & 6.9e-01 \\ 
+  5e+05 & std & 1.7e+00 & 0.0e+00 & 4.6e-02 & 8.5e-09 & 1.4e+00 & 9.1e-01 \\ 
+   \hline
+\hline
+\end{longtable}
+\newpage
+Results in 10 dimensions for functions 19, 20, 21, 22, 23, 24
+% latex table generated in R 2.15.1 by xtable 1.7-0 package
+% Sat Dec 15 19:01:56 2012
+\begin{longtable}{llllllll}
+  \hline
+fe & stats & V19 & V20 & V21 & V22 & V23 & V24 \\ 
+  \hline
+1e+03 & 0\% & 3.0e+02 & 3.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  1e+03 & 25\% & 8.0e+02 & 8.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  1e+03 & 50\% & 8.0e+02 & 8.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  1e+03 & 75\% & 8.0e+02 & 8.0e+02 & 5.0e+02 & NA & NA & NA \\ 
+  1e+03 & 100\% & 8.0e+02 & 8.8e+02 & 9.0e+02 & NA & NA & NA \\ 
+  1e+03 & avg & 6.8e+02 & 6.8e+02 & 4.1e+02 & NA & NA & NA \\ 
+  1e+03 & std & 2.2e+02 & 2.2e+02 & 1.7e+02 & NA & NA & NA \\ 
+  1e+04 & 0\% & 3.0e+02 & 3.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  1e+04 & 25\% & 8.0e+02 & 8.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  1e+04 & 50\% & 8.0e+02 & 8.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  1e+04 & 75\% & 8.0e+02 & 8.0e+02 & 5.0e+02 & NA & NA & NA \\ 
+  1e+04 & 100\% & 8.0e+02 & 8.8e+02 & 9.0e+02 & NA & NA & NA \\ 
+  1e+04 & avg & 6.8e+02 & 6.8e+02 & 4.1e+02 & NA & NA & NA \\ 
+  1e+04 & std & 2.2e+02 & 2.2e+02 & 1.7e+02 & NA & NA & NA \\ 
+  1e+05 & 0\% & 3.0e+02 & 3.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  1e+05 & 25\% & 8.0e+02 & 8.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  1e+05 & 50\% & 8.0e+02 & 8.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  1e+05 & 75\% & 8.0e+02 & 8.0e+02 & 5.0e+02 & NA & NA & NA \\ 
+  1e+05 & 100\% & 8.0e+02 & 8.8e+02 & 9.0e+02 & NA & NA & NA \\ 
+  1e+05 & avg & 6.8e+02 & 6.8e+02 & 4.1e+02 & NA & NA & NA \\ 
+  1e+05 & std & 2.2e+02 & 2.2e+02 & 1.7e+02 & NA & NA & NA \\ 
+  5e+05 & 0\% & 3.0e+02 & 3.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  5e+05 & 25\% & 8.0e+02 & 8.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  5e+05 & 50\% & 8.0e+02 & 8.0e+02 & 3.0e+02 & NA & NA & NA \\ 
+  5e+05 & 75\% & 8.0e+02 & 8.0e+02 & 5.0e+02 & NA & NA & NA \\ 
+  5e+05 & 100\% & 8.0e+02 & 8.8e+02 & 9.0e+02 & NA & NA & NA \\ 
+  5e+05 & avg & 6.8e+02 & 6.8e+02 & 4.1e+02 & NA & NA & NA \\ 
+  5e+05 & std & 2.2e+02 & 2.2e+02 & 1.7e+02 & NA & NA & NA \\ 
+   \hline
+\hline
+\end{longtable}
+\newpage
+Results in 30 dimensions for functions 6, 7, 8, 9, 10, 11
+% latex table generated in R 2.15.1 by xtable 1.7-0 package
+% Sat Dec 15 19:01:56 2012
+\begin{longtable}{llllllll}
+  \hline
+fe & stats & V6 & V7 & V8 & V9 & V10 & V11 \\ 
+  \hline
+1e+03 & 0\% & 2.7e+02 & 4.8e+03 & 2.1e+01 & 6.0e+00 & 1.8e+02 & 3.4e+01 \\ 
+  1e+03 & 25\% & 5.2e+02 & 4.8e+03 & 2.1e+01 & 7.8e+00 & 2.2e+02 & 3.8e+01 \\ 
+  1e+03 & 50\% & 6.0e+02 & 4.8e+03 & 2.1e+01 & 9.0e+00 & 2.4e+02 & 3.8e+01 \\ 
+  1e+03 & 75\% & 8.7e+02 & 4.8e+03 & 2.1e+01 & 9.6e+00 & 2.5e+02 & 3.9e+01 \\ 
+  1e+03 & 100\% & 1.5e+03 & 4.8e+03 & 2.1e+01 & 1.4e+01 & 2.7e+02 & 4.1e+01 \\ 
+  1e+03 & avg & 7.1e+02 & 4.8e+03 & 2.1e+01 & 9.0e+00 & 2.3e+02 & 3.8e+01 \\ 
+  1e+03 & std & 3.1e+02 & 1.5e+01 & 3.6e-02 & 1.9e+00 & 2.1e+01 & 1.5e+00 \\ 
+  1e+04 & 0\% & 1.0e-08 & 4.7e+03 & 2.1e+01 & 1.0e-08 & 4.2e+01 & 1.4e+01 \\ 
+  1e+04 & 25\% & 1.0e-08 & 4.7e+03 & 2.1e+01 & 1.2e-08 & 6.0e+01 & 2.7e+01 \\ 
+  1e+04 & 50\% & 1.1e-08 & 4.7e+03 & 2.1e+01 & 1.3e-08 & 7.0e+01 & 3.0e+01 \\ 
+  1e+04 & 75\% & 1.1e-08 & 4.7e+03 & 2.1e+01 & 2.3e-08 & 8.0e+01 & 3.1e+01 \\ 
+  1e+04 & 100\% & 1.3e-08 & 4.7e+03 & 2.1e+01 & 9.9e-01 & 1.3e+02 & 3.3e+01 \\ 
+  1e+04 & avg & 1.1e-08 & 4.7e+03 & 2.1e+01 & 4.0e-02 & 7.5e+01 & 2.9e+01 \\ 
+  1e+04 & std & 7.0e-10 & 2.6e-10 & 5.3e-02 & 2.0e-01 & 2.3e+01 & 4.2e+00 \\ 
+  1e+05 & 0\% & 1.0e-08 & 4.7e+03 & 2.1e+01 & 1.0e-08 & 4.2e+01 & 8.5e+00 \\ 
+  1e+05 & 25\% & 1.0e-08 & 4.7e+03 & 2.1e+01 & 1.2e-08 & 5.3e+01 & 2.2e+01 \\ 
+  1e+05 & 50\% & 1.1e-08 & 4.7e+03 & 2.1e+01 & 1.3e-08 & 5.6e+01 & 2.5e+01 \\ 
+  1e+05 & 75\% & 1.1e-08 & 4.7e+03 & 2.1e+01 & 2.3e-08 & 6.4e+01 & 2.7e+01 \\ 
+  1e+05 & 100\% & 1.3e-08 & 4.7e+03 & 2.1e+01 & 9.9e-01 & 7.8e+01 & 2.9e+01 \\ 
+  1e+05 & avg & 1.1e-08 & 4.7e+03 & 2.1e+01 & 4.0e-02 & 5.8e+01 & 2.4e+01 \\ 
+  1e+05 & std & 7.0e-10 & 4.5e-13 & 4.8e-02 & 2.0e-01 & 9.7e+00 & 4.6e+00 \\ 
+  5e+05 & 0\% & 1.0e-08 & 4.7e+03 & 2.1e+01 & 1.0e-08 & 4.2e+01 & 8.5e+00 \\ 
+  5e+05 & 25\% & 1.0e-08 & 4.7e+03 & 2.1e+01 & 1.2e-08 & 5.1e+01 & 2.2e+01 \\ 
+  5e+05 & 50\% & 1.1e-08 & 4.7e+03 & 2.1e+01 & 1.3e-08 & 5.6e+01 & 2.5e+01 \\ 
+  5e+05 & 75\% & 1.1e-08 & 4.7e+03 & 2.1e+01 & 2.3e-08 & 6.4e+01 & 2.7e+01 \\ 
+  5e+05 & 100\% & 1.3e-08 & 4.7e+03 & 2.1e+01 & 2.6e-04 & 7.8e+01 & 2.8e+01 \\ 
+  5e+05 & avg & 1.1e-08 & 4.7e+03 & 2.1e+01 & 1.0e-05 & 5.8e+01 & 2.4e+01 \\ 
+  5e+05 & std & 7.0e-10 & 1.9e-13 & 3.5e-02 & 5.1e-05 & 9.9e+00 & 4.4e+00 \\ 
+   \hline
+\hline
+\end{longtable}
+\newpage
+Results in 30 dimensions for functions 19, 20, 21, 22, 23, 24
+% latex table generated in R 2.15.1 by xtable 1.7-0 package
+% Sat Dec 15 19:01:56 2012
+\begin{longtable}{llllllll}
+  \hline
+fe & stats & V19 & V20 & V21 & V22 & V23 & V24 \\ 
+  \hline
+1e+03 & 0\% & 8.7e+02 & 9.2e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+03 & 25\% & 9.3e+02 & 9.3e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+03 & 50\% & 9.3e+02 & 9.3e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+03 & 75\% & 9.3e+02 & 9.4e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+03 & 100\% & 9.4e+02 & 9.4e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+03 & avg & 9.3e+02 & 9.3e+02 &    NA & NA & NA & NA \\ 
+  1e+03 & std & 1.4e+01 & 4.3e+00 &    NA & NA & NA & NA \\ 
+  1e+04 & 0\% & 8.0e+02 & 8.0e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+04 & 25\% & 9.1e+02 & 9.1e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+04 & 50\% & 9.1e+02 & 9.1e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+04 & 75\% & 9.1e+02 & 9.1e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+04 & 100\% & 9.1e+02 & 9.1e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+04 & avg & 9.0e+02 & 9.0e+02 &    NA & NA & NA & NA \\ 
+  1e+04 & std & 3.0e+01 & 2.1e+01 &    NA & NA & NA & NA \\ 
+  1e+05 & 0\% & 8.0e+02 & 8.0e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+05 & 25\% & 9.0e+02 & 9.0e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+05 & 50\% & 9.0e+02 & 9.0e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+05 & 75\% & 9.0e+02 & 9.0e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+05 & 100\% & 9.1e+02 & 9.1e+02 & 5e+02 & NA & NA & NA \\ 
+  1e+05 & avg & 9.0e+02 & 9.0e+02 &    NA & NA & NA & NA \\ 
+  1e+05 & std & 2.9e+01 & 2.1e+01 &    NA & NA & NA & NA \\ 
+  5e+05 & 0\% & 8.0e+02 & 8.0e+02 & 5e+02 & NA & NA & NA \\ 
+  5e+05 & 25\% & 9.0e+02 & 9.0e+02 & 5e+02 & NA & NA & NA \\ 
+  5e+05 & 50\% & 9.0e+02 & 9.0e+02 & 5e+02 & NA & NA & NA \\ 
+  5e+05 & 75\% & 9.0e+02 & 9.0e+02 & 5e+02 & NA & NA & NA \\ 
+  5e+05 & 100\% & 9.1e+02 & 9.1e+02 & 5e+02 & NA & NA & NA \\ 
+  5e+05 & avg & 9.0e+02 & 9.0e+02 &    NA & NA & NA & NA \\ 
+  5e+05 & std & 2.9e+01 & 2.1e+01 &    NA & NA & NA & NA \\ 
+   \hline
+\hline
+\end{longtable}
+\newpage
+
+}
 \section{Wnioski}
 \label{sec-5}
 
 
-Słowne podsumowanie wyników i jakieś wnioski
+Wyniki uzyskane w czasie tego projektu różnią się w porównaniu do
+wyników uzyskanych przez J. Rönkkönen, S. Kukkonen, K. V. Price na
+korzyść biblioteki DEoptim. Wyniki zarówno dla 10$^3$ jak i dla 5*10$^5$
+wywołań funkcji są zazwyczaj lepsze o jeden do trzech rzędów
+wielkości. Zaś warto zauważyć, że standardowe odchylenie uzyskanych
+przez nas wyników jest zazwyczaj większe niż u wyników Rönkkönen et
+al. Z tego można wywnioskować, że implementacja algorytmu
+optymalizacji poprzez różniczkowanie ewolucyjne w postaci biblioteki
+DEoptim dla języka R oraz dobrane przez nas parametry optymalizacji
+potrafią uzyskać lepsze wyniki niż uzyskane przez Rönkkönen et al,
+choć jej wyniki potrafią być mniej stabilne.
 
 \end{document}

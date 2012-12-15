@@ -1,11 +1,7 @@
 library('sfsmisc')
 
 funcs = c(6:11, 19:24)
-#funcs = c(6:12, 19:24) # turned 12 off, since it has some sort of memory leak
-#funcs = c(6:7)
-#fes = c(10**3, 10**4, 10**5, 5*10**5) # full workload
-fes = c(10**3, 10**4, 10**5, 5*10**5) # test workload
-#fes = c(10**1, 10**2) # debug workload
+fes = c(10**3, 10**4, 10**5, 5*10**5) # full workload
 fes.max = last(fes)
 dims = c(10, 30)
 runs = 25
