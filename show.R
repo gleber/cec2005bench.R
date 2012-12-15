@@ -40,7 +40,7 @@ if (!exists("results")) {
 print(dim(results))
 
 res.rows = 0 # 7*length(dims)*length(fes)
-res.cols = length(funcs)
+res.cols = length(funcs) + 3
 res = matrix(nrow=res.rows, ncol=res.cols)
 
 print(res)
@@ -49,16 +49,34 @@ print(res)
 biases = t(as.matrix(fbias))[,rep(1,25)]
 biases = biases[funcs,]
 
-for (d in dims) {
-  indim = results[funcs,d,,,1]
+## for (d in dims) {
+for (d in c(10)) {
+  indim <- results[funcs,d,,,1]
   for (fe.i in 1:length(fes)) {
-    vals = indim[,,fe.i]
-    infe = vals - biases
-    infe.s = apply(infe, 1, function(x) c(quantile(x, na.rm=TRUE),mean(x),sd(x)))
-    res = rbind(res, infe.s)
+    fe <- fes[fe.i]
+    vals <- indim[,,fe.i]
+    infe <- vals - biases
+    infe.s <- apply(infe, 1,
+                    function(x) format(c(quantile(x, na.rm=TRUE),mean(x),sd(x)), scientific=TRUE))
+                    ## function(x) c(quantile(x, na.rm=TRUE),mean(x),sd(x)))
+    rownames(infe.s)[6] <- "avg"
+    rownames(infe.s)[7] <- "std"
+    ## rownames(infe.s) <- lapply(rownames(infe.s),
+    ##                            ## function(x) paste(d, "dim", format(fe, scientific=TRUE), "fes", x))
+    ##                            function(x) paste(format(fe, scientific=TRUE), "fes", x))
+    r <- cbind(d, fe, rownames(infe.s), infe.s)
+    res <- rbind(res, r)
   } 
 }
+rownames(res) <- NULL
 print(res)
+
+## library(taRifx)
+## library(xtable)
+
+## res.by <- bytable(ChickWeight$weight, list(ChickWeight$Chick, ChickWeight$Diet) )
+## colnames(test.by) <- c('Diet','Chick','Mean Weight')
+## print(latex.table.by(test.by), include.rownames = FALSE, include.colnames = TRUE, sanitize.text.function = force)
 
 stop()
 
