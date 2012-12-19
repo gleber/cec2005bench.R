@@ -1,4 +1,4 @@
-% Created 2012-12-15 Sat 21:00
+% Created 2012-12-16 Sun 12:44
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -220,7 +220,6 @@ Tabelki wyników. Dla niektórych funkcji w polach wyników jest wpisane
 NA, co oznacza, że wyniki jeszcze nie są dostępne, a obliczenia wciąż
 trwają.
 
-\texttt{
 Results in 10 dimensions for functions 6, 7, 8, 9, 10, 11
 % latex table generated in R 2.15.1 by xtable 1.7-0 package
 % Sat Dec 15 19:01:56 2012
@@ -378,7 +377,33 @@ fe & stats & V19 & V20 & V21 & V22 & V23 & V24 \\
 \end{longtable}
 \newpage
 
-}
+
+Porównanie średnich błędu wyników DEoptim z wynikami Rönkkönen et al
+dla 10$^3$, 10$^4$, 10$^5$ wykonań funkcji optymalizowanej w 10 wymiarach:
+
+\begin{table}[htb]
+\caption[Plik bench.R]{Najważniejszy kod z pliku bench.R odpowiadający za uruchomienie procesu optymalizacji} \label{file:params}
+\begin{center}
+\begin{tabular}{rrrrrrr}
+ FEs  &   10$^3$  &     10$^3$  &   10$^4$  &     10$^4$  &   10$^5$  &     10$^5$  \\
+   f  &  DEoptim  &  Rönkkönen  &  DEoptim  &  Rönkkönen  &  DEoptim  &  Rönkkönen  \\
+\hline
+   6  &  1.2e+00  &   2.98e+07  &  9.6e-01  &   4.34e+01  &  9.6e-01  &   0.00e+00  \\
+   7  &  1.3e+03  &   4.20e+02  &  1.3e+03  &   7.87e-01  &  1.3e+03  &   1.52e-01  \\
+   8  &  2.1e+01  &   2.08e+01  &  2.0e+01  &   2.05e+01  &  2.0e+01  &   2.04e+01  \\
+   9  &  6.5e-07  &   3.11e+01  &  1.8e-08  &   5.49e-09  &  0.0e+00  &   0.00e+00  \\
+  10  &  2.7e+01  &   1.09e+02  &  5.3e+00  &   5.80e+01  &  5.1e+00  &   3.60e+01  \\
+  11  &  5.3e+00  &   1.18e+01  &  6.9e-01  &   1.00e+01  &  6.9e-01  &   4.67e+00  \\
+  12  &       NA  &   7.84e+04  &       NA  &   1.64e+04  &       NA  &   7.24e+02  \\
+  19  &  6.8e+02  &   1.16e+03  &  6.8e+02  &   8.30e+02  &  6.8e+02  &   3.00e+02  \\
+  20  &  6.8e+02  &   1.18e+03  &  6.8e+02  &   8.58e+02  &  6.8e+02  &   3.00e+02  \\
+  21  &  4.1e+02  &   1.35e+03  &  4.1e+02  &   8.10e+02  &  4.1e+02  &   5.00e+02  \\
+  22  &       NA  &   1.07e+03  &       NA  &   8.38e+02  &       NA  &   7.34e+02  \\
+  23  &       NA  &   1.36e+03  &       NA  &   8.47e+02  &       NA  &   5.59e+02  \\
+  24  &       NA  &   1.25e+03  &       NA  &   3.98e+02  &       NA  &   2.00e+02  \\
+\end{tabular}
+\end{center}
+\end{table}
 \section{Wnioski}
 \label{sec-5}
 
