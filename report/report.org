@@ -191,8 +191,10 @@ dla 10^3, 10^4, 10^5 wykonań funkcji optymalizowanej w 10 wymiarach:
 Wyniki uzyskane w czasie tego projektu różnią się w porównaniu do
 wyników uzyskanych przez J. Rönkkönen, S. Kukkonen, K. V. Price na
 korzyść biblioteki DEoptim. Wyniki zarówno dla 10^3 jak i dla 5*10^5
-wywołań funkcji są zazwyczaj lepsze o jeden do trzech rzędów
-wielkości. Zaś warto zauważyć, że standardowe odchylenie uzyskanych
+wywołań funkcji są lepsze o jeden do trzech rzędów
+wielkości. Jednocześnie widać, że DEoptim zaczyna zbiegać szybciej
+(dla 10^3), ale potem jego przewaga maleje.
+Warto też zauważyć, że standardowe odchylenie uzyskanych
 przez nas wyników jest zazwyczaj większe niż u wyników Rönkkönen et
 al. Z tego można wywnioskować, że implementacja algorytmu
 optymalizacji poprzez różniczkowanie ewolucyjne w postaci biblioteki
